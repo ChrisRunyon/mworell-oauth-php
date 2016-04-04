@@ -100,13 +100,16 @@ class OAuthSignatureMethodHMACSHA1 extends OAuthSignatureMethod
 	public function verify ( $request, $base_string, $consumer_secret, $token_secret, $signature )
 	{
 		$a = $request->urldecode($signature);
+
 		$b = $request->urldecode($this->signature($request, $base_string, $consumer_secret, $token_secret));
+
 
 		// We have to compare the decoded values
 		$valA  = base64_decode($a);
 		$valB  = base64_decode($b);
 
 		// Crude binary comparison
+        //echo rawurlencode($valA). "==" . rawurlencode($valB);
 		return rawurlencode($valA) == rawurlencode($valB);
 	}
 }

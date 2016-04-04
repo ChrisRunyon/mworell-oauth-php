@@ -308,7 +308,7 @@ class OAuthRequestLogger
 			$retarr[$key] = $value;
 		}
 		ksort($retarr);
-		
+
 		return $retarr;
 	}
 }

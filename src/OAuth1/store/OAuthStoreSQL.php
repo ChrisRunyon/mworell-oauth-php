@@ -120,6 +120,8 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 	 */
 	public function getSecretsForVerify ( $consumer_key, $token, $token_type = 'access' )
 	{
+
+
 		if ($token_type === false)
 		{
 			$rs = $this->query_row_assoc('
@@ -139,12 +141,12 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 				$rs['user_id']		= false;
 				$rs['ost_id']		= false;
 			}
+
 		}
 		else
 		{
 			$rs = $this->query_row_assoc('
-						SELECT	osr_id, 
-								ost_id,
+						SELECT	osr_id,
 								ost_usa_id_ref			as user_id,
 								osr_consumer_key		as consumer_key,
 								osr_consumer_secret		as consumer_secret,
@@ -160,8 +162,10 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						  AND ost_token_ttl     >= NOW()
 						',
 						$token_type, $consumer_key, $token);
+
+
 		}
-		
+
 		if (empty($rs))
 		{
 			throw new OAuthException2('The consumer_key "'.$consumer_key.'" token "'.$token.'" combination does not exist or is not enabled.');
@@ -376,7 +380,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 		$this->query('
 					INSERT IGNORE INTO oauth_consumer_token
 					SET oct_ocr_id_ref	= %d,
-						oct_usa_id_ref  = %d,
+						oct_usa_id_ref  = \'%s\',
 						oct_name		= \'%s\',
 						oct_token		= \'%s\',
 						oct_token_secret= \'%s\',
@@ -651,7 +655,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						ON oct_ocr_id_ref = ocr_id
 				WHERE ocr_consumer_key	= \'%s\'
 				  AND oct_token			= \'%s\'
-				  AND oct_usa_id_ref	= %d
+				  AND oct_usa_id_ref	= \'%s\'
 				', $consumer_key, $token, $user_id);
 		}
 	}
@@ -768,7 +772,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						FROM oauth_consumer_registry
 						WHERE ocr_consumer_key = \'%s\'
 						  AND ocr_id <> %d
-						  AND (ocr_usa_id_ref = %d OR ocr_usa_id_ref IS NULL)
+						  AND (ocr_usa_id_ref = \'%s\' OR ocr_usa_id_ref IS NULL)
 						', $server['consumer_key'], $server['id'], $user_id);
 		}
 		else
@@ -777,7 +781,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						SELECT ocr_id
 						FROM oauth_consumer_registry
 						WHERE ocr_consumer_key = \'%s\'
-						  AND (ocr_usa_id_ref = %d OR ocr_usa_id_ref IS NULL)
+						  AND (ocr_usa_id_ref = \'%s\' OR ocr_usa_id_ref IS NULL)
 						', $server['consumer_key'], $user_id);
 		}
 
@@ -811,7 +815,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 			}
 			else
 			{
-				$update_user =  ', ocr_usa_id_ref = '.intval($server['user_id']);
+				$update_user =  ', ocr_usa_id_ref = '.$server['user_id'];
 			}
 		}
 		else
@@ -869,12 +873,13 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 			if (empty($update_user))
 			{
 				// Per default the user owning the key is the user registering the key
-				$update_user =  ', ocr_usa_id_ref = '.intval($user_id);
+				$update_user =  ', ocr_usa_id_ref = '.$user_id;
 			}
 
 			$this->query('
 					INSERT INTO oauth_consumer_registry
-					SET ocr_consumer_key    	= \'%s\',
+					SET ocr_usa_id_ref    	    = \'%s\',
+					    ocr_consumer_key    	= \'%s\',
 						ocr_consumer_secret 	= \'%s\',
 						ocr_server_uri	    	= \'%s\',
 						ocr_server_uri_host 	= \'%s\',
@@ -884,7 +889,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						ocr_authorize_uri		= \'%s\',
 						ocr_access_token_uri	= \'%s\',
 						ocr_signature_methods	= \'%s\'
-						'.$update_user, 
+						',$user_id,
 					$server['consumer_key'],
 					$server['consumer_secret'],
 					$server['server_uri'],
@@ -971,7 +976,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 					{
 						$this->query('
 							UPDATE oauth_server_registry
-							SET osr_usa_id_ref = %d
+							SET osr_usa_id_ref = \'%s\'
 							WHERE osr_id = %d
 							', $consumer['user_id'], $consumer['id']);	
 					}
@@ -1025,13 +1030,13 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 				}
 				else
 				{
-					$owner_id = intval($consumer['user_id']);
+					$owner_id = $consumer['user_id'];
 				}
 			}
 			else
 			{
 				// No admin, take the user id as the owner id.
-				$owner_id = intval($user_id);
+				$owner_id = $user_id;
 			}
 
 			$this->query('
@@ -1087,7 +1092,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 			$this->query('
 					DELETE FROM oauth_server_registry
 					WHERE osr_consumer_key = \'%s\'
-					  AND (osr_usa_id_ref = %d OR osr_usa_id_ref IS NULL)
+					  AND (osr_usa_id_ref = \'%s\' OR osr_usa_id_ref IS NULL)
 					', $consumer_key, $user_id);
 		}
 		else
@@ -1095,7 +1100,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 			$this->query('
 					DELETE FROM oauth_server_registry
 					WHERE osr_consumer_key = \'%s\'
-					  AND osr_usa_id_ref   = %d
+					  AND osr_usa_id_ref   = \'%s\'
 					', $consumer_key, $user_id);
 		}
 	}	
@@ -1226,7 +1231,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 		$this->query('
 				INSERT INTO oauth_server_token
 				SET ost_osr_id_ref		= %d,
-					ost_usa_id_ref		= 1,
+					ost_usa_id_ref		= \'%s\',
 					ost_token			= \'%s\',
 					ost_token_secret	= \'%s\',
 					ost_token_type		= \'request\',
@@ -1241,7 +1246,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 					ost_token_ttl       = VALUES(ost_token_ttl),
 					ost_callback_url    = VALUES(ost_callback_url),
 					ost_timestamp		= NOW()
-				', $osr_id, $token, $secret, $ttl, $options['oauth_callback']);
+				', $osr_id, $options['user_id'], $token, $secret, $ttl, $options['oauth_callback']);
 		
 		return array('token'=>$token, 'token_secret'=>$secret, 'token_ttl'=>$ttl);
 	}
@@ -1307,7 +1312,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 		$this->query('
 					UPDATE oauth_server_token
 					SET ost_authorized    = 1,
-						ost_usa_id_ref    = %d,
+						ost_usa_id_ref    = \'%s\',
 						ost_timestamp     = NOW(),
 						ost_referrer_host = \'%s\',
 						ost_verifier      = \'%s\'
@@ -1441,7 +1446,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						ON ost_osr_id_ref = osr_id
 				WHERE ost_token_type = \'access\'
 				  AND ost_token      = \'%s\'
-				  AND ost_usa_id_ref = %d
+				  AND ost_usa_id_ref = \'%s\'
 				  AND ost_token_ttl  >= NOW()
 				', $token, $user_id);
 		
@@ -1476,7 +1481,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						DELETE FROM oauth_server_token
 						WHERE ost_token 	 = \'%s\'
 						  AND ost_token_type = \'access\'
-						  AND ost_usa_id_ref = %d
+						  AND ost_usa_id_ref = \'%s\'
 						', $token, $user_id);
 		}
 	}
@@ -1533,7 +1538,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 						osr_requester_email		as requester_email,
 						osr_callback_uri		as callback_uri
 				FROM oauth_server_registry
-				WHERE (osr_usa_id_ref = %d OR osr_usa_id_ref IS NULL)
+				WHERE (osr_usa_id_ref = \'%s\' OR osr_usa_id_ref IS NULL)
 				ORDER BY osr_application_title
 				', $user_id);
 		return $rs;
@@ -1588,7 +1593,7 @@ abstract class OAuthStoreSQL extends OAuthStoreAbstract
 				FROM oauth_server_registry
 					JOIN oauth_server_token
 					ON ost_osr_id_ref = osr_id
-				WHERE ost_usa_id_ref = %d
+				WHERE ost_usa_id_ref = \'%s\'
 				  AND ost_token_type = \'access\'
 				  AND ost_token_ttl  >= NOW()
 				ORDER BY osr_application_title
